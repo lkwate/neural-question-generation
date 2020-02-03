@@ -1,0 +1,18 @@
+{
+    "pos" : {
+        "schema" : "BIO", 
+        "tags" : ["$", "``", "''", ",", "-LRB-", "-RRB-", ".", ":",
+                 "ADD", "AFX", "CC", "CD", "DT", "EX", "FW", "GW",
+                 "HYPH", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NFP",
+                 "NIL", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP",
+                 "PRP$", "RB", "RBR", "RBS", "RP", "SP", "SYM", "TO", 
+                 "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", 
+                 "WP", "WP$", "WRB", "XX", "_SP"]
+    }, 
+    "ner" : {
+        "schema" : "BIO", 
+        "tags" : ["PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", 
+                  "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE", "DATE", "TIME", 
+                  "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL"]
+    }
+}
