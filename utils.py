@@ -275,3 +275,197 @@ class Dataset():
                                             end_answer = start_answer + len(ans['text'])
                                     self.dataset[index]['qas'].append((question, start_answer, end_answer))
 
+
+"""
+    useful functions to clean up text before process it for tagging 
+"""
+def _is_whitespace(char):
+    """Checks whether `chars` is a whitespace character."""
+    # \t, \n, and \r are technically contorl characters but we treat them
+    # as whitespace since they are generally considered as such.
+    if char == " " or char == "\t" or char == "\n" or char == "\r":
+        return True
+    cat = unicodedata.category(char)
+    if cat == "Zs":
+        return True
+    return False
+
+
+def _is_control(char):
+    """Checks whether `chars` is a control character."""
+    # These are technically control characters but we count them as whitespace
+    # characters.
+    if char == "\t" or char == "\n" or char == "\r":
+        return False
+    cat = unicodedata.category(char)
+    if cat.startswith("C"):
+        return True
+    return False
+
+
+def _is_punctuation(char):
+    """Checks whether `chars` is a punctuation character."""
+    cp = ord(char)
+    # We treat all non-letter/number ASCII as punctuation.
+    # Characters such as "^", "$", and "`" are not in the Unicode
+    # Punctuation class but we treat them as punctuation anyways, for
+    # consistency.
+    if (cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126):
+        return True
+    cat = unicodedata.category(char)
+    if cat.startswith("P"):
+        return True
+    return False
+
+class Tagger(): 
+    def __init__(self):
+        self.__nlpTagger = en_core_web_sm.load()
+        
+    def _clean_text(self, text): 
+        """Performs invalid character removal and whitespace cleanup on text."""
+        output = []
+        for char in text:
+            cp = ord(char)
+            if cp == 0 or cp == 0xFFFD or _is_control(char):
+                continue
+            if _is_whitespace(char):
+                output.append(" ")
+            else : 
+                output.append(char)
+        return "".join(output)
+    
+    def _run_strip_accent(self, text): 
+        """Strips accents from a piece of text."""
+        
+        text = unicodedata.normalize("NFD", text)
+        output = []
+        for char in text:
+            cat = unicodedata.category(char)
+            if cat == "Mn":
+                continue
+            output.append(char)
+        return "".join(output)
+
+    def lowercase_text(self, t, all_special_tokens): 
+        """
+            convert text into lowercase
+        """
+        #strip accents
+        t =  self._run_strip_accent(t)
+        
+        #clean text 
+        t = self._clean_text(t)
+        
+        # convert non-special tokens to lowercase
+        escaped_special_toks = [re.escape(s_tok) for s_tok in all_special_tokens]
+        pattern = r"(" + r"|".join(escaped_special_toks) + r")|" + r"(.+?)"
+        return re.sub(pattern, lambda m: m.groups()[0] or m.groups()[1].lower(), t)
+    
+    def get_tag(self, sentence, tokens_bert, all_special_tokens):
+        """
+            get tag of a given sentence : 
+            arg :
+                - sentence 
+                - tokens_bert : list of tokens provider by the tokenizer of BERT-base-uncased
+                - all_special_tokens : list of all the special tokens of the BERT tokenizer
+        """
+        sentence = sentence.strip()
+        result = []
+        sentence = self.lowercase_text(sentence, all_special_tokens)
+        tags = self.__nlpTagger(sentence)
+        posTags = [(w.text, w.tag_, False) for w in tags]
+        nerTags = [(ent.text, ent.start_char, ent.end_char, ent.label_, False) for ent in tags.ents]
+        
+        index = 0
+        
+        for inittoken in tokens_bert:
+            flag = True
+            token = inittoken
+            if token.startswith('#'):
+                token = token[2:]
+                
+            ## handle ner tagging
+            if sentence.startswith(' '):
+                sentence = sentence.strip()
+                index += 1
+                
+            if sentence.startswith(token):
+                sentence = sentence[len(token):]
+                
+            if len(nerTags) != 0: 
+                text, start, end, label, text_flag = nerTags[0]
+                if index >= start and index < end:
+                    if text_flag : 
+                        ner_label = 'I-' + label
+                    else : 
+                        ner_label = 'B-' + label
+                        text_flag = True
+                        nerTags[0] = (text, start, end, label, text_flag)
+                    flag = False
+
+                if text.startswith(' '):
+                    text = text.strip()
+                
+                if text.startswith(token):
+                    text = text[len(token):]
+                    if text == '':
+                        nerTags.pop(0)
+                    else : 
+                        nerTags[0] = (text, start, end, label, text_flag)
+            if flag:
+                ner_label = 'O'
+            index += len(token)
+            
+            
+            if len(posTags) != 0:
+                word, pos_l, word_flag = posTags[0]
+                if word.startswith(token): 
+                    word = word[len(token):]
+                    if word_flag : 
+                        pos_label = 'I-' + pos_l
+                    else : 
+                        pos_label = 'B-' + pos_l
+                        word_flag = True
+                        posTags[0] = (word, pos_l, word_flag)
+                        
+                    if word == '':
+                        posTags.pop(0)
+                    else :
+                        posTags[0] = (word, pos_l, word_flag)
+            result.append((inittoken, ner_label, pos_label))
+        return result
+    
+    def _insert_answer(self,input_list, sentence, tokenizer, start_answer, end_answer):
+        """
+            insert the tag of the bouandaries answer token
+        """
+        before_answer = tokenizer.tokenize(sentence[:start_answer])
+        answer = tokenizer.tokenize(sentence[start_answer : end_answer])
+        after_answer = tokenizer.tokenize(sentence[end_answer :])
+        
+        # init the result with the begining token
+        result = [(constant['cls'], 0, 0)]
+        
+        result += input_list[:len(before_answer)]
+        result += [(constant['start_answer_token'], 0, 0)]
+        result += input_list[len(before_answer):len(before_answer) + len(answer)]
+        result += [(constant['end_answer_token'], 0, 0)]
+        result += input_list[len(before_answer) + len(answer):]
+        
+        result += [(constant['sep'], 0, 0)]
+        
+        return result
+    
+    def get_tag_index(self, sentence, tokenizer, dic, start_answer=None, end_answer=None) : 
+        """
+            get index in dictionary of tags of a given sentence
+        """
+        bert_tokens = tokenizer.tokenize(sentence)
+        all_special_tokens = tokenizer.all_special_tokens
+        tags = self.get_tag(sentence, bert_tokens, all_special_tokens)
+        result = []
+        for tag in tags:
+            result.append((tag[0], dic.id_by_ner(tag[1]), dic.id_by_pos(tag[2])))
+        if start_answer and end_answer: 
+            result = self._insert_answer(result, sentence, tokenizer, start_answer, end_answer)
+        return result

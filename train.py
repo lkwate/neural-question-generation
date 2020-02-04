@@ -54,7 +54,7 @@ def trainIter(dataset, model, optimizer, criterion, period_display = 2000, epoch
                 if iter % period_display:
                     avg_loss = plot_total_lost / period_display
                     plot_losses.append(avg_loss)
-                    print("loss = %.4f" % (avg_loss))
+                    print("loss = %.7f" % (avg_loss))
                     plot_total_lost = 0
     return plot_losses
 
