@@ -4,7 +4,7 @@ from torch import optim
 import torch.nn as nn 
 
 
-def train(context, start_answer, end_answer, question_indices, model, optimizer, criterion): 
+def train(context, start_answer, end_answer, question_text, question_indices, model, optimizer, criterion, dic): 
     """
         assumptions :
             - question indexed_tokens of question provided by bert_tokenizer (with special token)
@@ -12,51 +12,45 @@ def train(context, start_answer, end_answer, question_indices, model, optimizer,
     #set grad of optimizer to zero
     optimizer.zero_grad()
     loss = 0
-    
+    #extract response
+    response = context[start_answer:end_answer]
     target_length = len(question_indices)
-    
-    tgt = question_indices[:1]
-    memory, prob_max = model(context, tgt, start_answer, end_answer)
-    for di in range(1, target_length - 1):
-        loss += criterion(prob_max, torch.LongTensor([question_indices[di]]))
-        tgt = question_indices[:di + 1]
-        prob_max = model.decode(tgt, memory)
-        prob_max = prob_max[di, :].unsqueeze(0)
-        target_index = torch.argmax(prob_max).item()
+    question = []
+    memory, prob_max = model(context, response, question_text, start_answer, end_answer)
+    for di in range(target_length - 1):
         
-    ## teacher to output "[SEP]" at the end of each question
-    loss += criterion(prob_max, torch.LongTensor([question_indices[target_length - 1]]))
+        target_index = torch.argmax(prob_max[di, :]).item()
+        question.append(target_index)
+        loss += criterion(prob_max[di, :].unsqueeze(0), torch.LongTensor([question_indices[di + 1]]))
     
+        predicted = " ".join([dic.word_by_id(item) for item in question])
+        truth =  " ".join([dic.word_by_id(item) for item in question_indices])
     
     loss.backward()
     
     optimizer.step()
     
-    return loss.item() / target_length
+    return loss.item() / target_length, predicted, truth
 
-def trainIter(dataset, model, optimizer, criterion, period_display = 2000, epoch = 1000): 
-    """
-        loop over dataset and train on each sample.
-    """
-    iter = 1
-    plot_losses = []
-    plot_total_lost = 0
-    for _ in range(epoch): 
-        for _, data in dataset.items(): 
-            context = data['context']
-            for qas in data['qas']:
-                question = qas[0]
-                question_indices = model.embedding.bertEmb.get_id_tokens(question)
-                start_answer = qas[1]
-                end_answer = qas[2]
-                loss = train(context, start_answer, end_answer, question_indices, model, optimizer, criterion)
-                plot_total_lost += loss
-                if iter % period_display:
-                    avg_loss = plot_total_lost / period_display
-                    plot_losses.append(avg_loss)
-                    print("loss = %.7f" % (avg_loss))
-                    plot_total_lost = 0
-    return plot_losses
+def evaluate(model, context, start_answer, end_answer, dic):
+    
+    question = [constant['cls']]
+    max_length_question = constant['max_question_length']
+    with torch.no_grad(): 
+        memory, prob_max = model(context, question, start_answer, end_answer)
+        target_index = torch.argmax(prob_max).item()
+        question.append(target_index)
+        
+        for di in range(1, max_length_question):
+            prob_max = model.decode(question, memory)
+            prob_max = prob_max[di, :]
+            target_index = torch.argmax(prob_max).item()
+            question.append(target_index)
+            
+            if target_index == constant['sep']:
+                break
+                
+    return [dic.word_by_id(item) for item in question]
 
 
 if __name__ == '__main__': 

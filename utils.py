@@ -33,7 +33,6 @@ constant = {
 # bert model for word embedding
 class BertEmb():
     def __init__(self, path_to_tokenizer = None, path_to_model = None):
-        
         if path_to_tokenizer:
             try :
                 #self.tokenizer = torch.hub.load('huggingface/pytorch-transformers', 'tokenizer', path_to_tokenizer)
@@ -81,44 +80,40 @@ class BertEmb():
         before_answer = self.encode(sentence[:start_answer])
         answer = self.encode(sentence[start_answer:end_answer])
         after_answer = self.encode(sentence[end_answer:])
-        result = [101]
-        result += before_answer + [1] + answer + [2] + after_answer + [102]
+        result = before_answer + [1] + answer + [2] + after_answer
         return result
     
     
-    '''
-    def padding_sequence(self, previous_indexed_tokens): 
-        """
-            assumptions : within this function we consider len(previous_indexed_tokens) < max_input_length
-            padding a given sequence by adding the index of token '[PAD]' in dictionary 
-            outputs : indexed_tokens, len(previous_indexed_tokens)
-        """
-        previous_length = len(previous_indexed_tokens)
-        padding_length = self.max_input_length - previous_length
-        
-        # padding
-        indexed_tokens = previous_indexed_tokens + [0] * padding_length
-        
-        return indexed_tokens, previous_length
-    '''
-    
-    def get_word_emb(self, sentence, start_answer = None, end_answer = None):
+    def get_word_emb(self, text, start_answer = None, end_answer = None):
+        sentences = sent_tokenize(text)
+        indexed_tokens = []
+        sentences_tagged = []
+        for sent in sentences:
+            tokens_encoded = self.get_id_tokens(sent)
+            indexed_tokens.append(tokens_encoded)
         """
             retreiving of word embeddings of the tokens of a given sentence by processing
             sentence through BERTModel
         """
+        sent_index_answer = -1 # index of sentence which content spanned answer
         if start_answer and end_answer: 
-            indexed_tokens = self.insert_answers_indices(sentence, start_answer, end_answer)
-        else :
-            indexed_tokens = self.get_id_tokens(sentence)
-        """
-        #padding sequence if it's necessary
-        if len(indexed_tokens) < self.max_input_length:
-            indexed_tokens, index_padding = self.padding_sequence(indexed_tokens)
-        """
+            
+            index = 0
+            for i in range(len(sentences)):
+                if index <= start_answer and (index + len(sentences[i])) >= end_answer:
+                    start_answer -= index
+                    end_answer -= index
+                    sent_index_answer = i
+                    indexed_tokens[i] = self.insert_answers_indices(sentences[i], start_answer, end_answer)
+                    break
+                index += len(sentences[i])
         
-        
-        return self.get_word_emb_by_indices(indexed_tokens)
+        output = []
+        for i_token in indexed_tokens:
+            output.append(self.get_word_emb_by_indices(i_token))
+        output = torch.cat(output, dim = 0)
+       
+        return output
 
     def get_word_emb_by_indices(self, indexed_tokens): 
         
@@ -252,16 +247,18 @@ class Dataset():
             
             data = json.load(json_file)
             for batch_data in data['data']: 
-                index += 1
-                self.dataset[index] = {}
+            
                 for paragraph in batch_data['paragraphs']:
                     if paragraph['context']: 
+                        index += 1
+                        self.dataset[index] = {}
                         self.dataset[index]['context'] = paragraph['context']
+                        
                         # loop over question and answers for a given context
                         if len(paragraph['qas']) != 0:
                             self.dataset[index]['qas'] = []
                             for qas in paragraph['qas']: 
-                                if qas['is_impossible'] is False: 
+                                if not qas['is_impossible']: 
                                     question = qas['question']
 
                                     # loop over answers
@@ -274,7 +271,6 @@ class Dataset():
                                         if length_answer <= len(ans['text']): 
                                             end_answer = start_answer + len(ans['text'])
                                     self.dataset[index]['qas'].append((question, start_answer, end_answer))
-
 
 """
     useful functions to clean up text before process it for tagging 
