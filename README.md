@@ -24,3 +24,35 @@ to use our systems you need to follow those steps :
 	  	pip install -U spacy
 		python -m spacy download en_core_web_sm
 		pip install torch torchvision
+
+##  Execute
+
+	  	git clone https://github.com/lkwate/neural-question-generation.git
+	  	cd neural-question-generation
+
+* fill a **.json file** (e.g. context.json) with the follow schema
+
+  	  	{
+  	  "data" : [
+  	    {
+  	    	"paragraphs" : [
+  	          {
+  	            "context" : "paragraph context",
+  	            "qas" : [
+  	              {
+  	                "question" : "text", 
+  	                "answers" : [
+  	                  {
+  	                    "text" : "response",
+  	                    "answer_start" : 2
+  	                  },{...}
+  	                ]
+  	              },{...}
+  	            ]
+  	          },{...}
+  	        ]
+  	    },{...}
+  	  ]
+  	}
+
+  
