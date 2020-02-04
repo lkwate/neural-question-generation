@@ -19,18 +19,23 @@ to use our systems you need to follow those steps :
 
 * install dependencies : 
 
+	  	
+	
+	```
 	  	sudo apt-get install python3.7
 	  	sudo apt-get install python3-pip
 	  	pip install -U spacy
-		python -m spacy download en_core_web_sm
-		pip install torch torchvision
+	  	python -m spacy download en_core_web_sm
+	  	pip install torch torchvision
+	```
+	
 
 ##  Execute
 
 	  	git clone https://github.com/lkwate/neural-question-generation.git
 	  	cd neural-question-generation
 
-* fill a **.json file** (e.g. context.json) with the follow schema
+* fill a **.json file** (e.g. context.json) which the follow schema
 
   	  	{
   	  "data" : [
@@ -54,5 +59,11 @@ to use our systems you need to follow those steps :
   	    },{...}
   	  ]
   	}
+
+* modify the path of **.json** (in **eval.py at line 55**) from where data will be fetch to generate question 
+
+* execute this command to launch
+
+  	 python eval.py
 
   
