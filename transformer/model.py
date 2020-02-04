@@ -65,7 +65,7 @@ class TransformerModel(nn.Module):
     
     def __init__(self, d_model=768, vocab_size =30522, path_to_bert_tokenizer=None, path_to_bert_model=None):
         super(TransformerModel, self).__init__()
-        self.transformer = Transformer(d_model=768)
+        self.transformer = Transformer(d_model=768, num_encoder_layers=24, num_decoder_layers=24)
         self.embedding = EmbeddingLayer(d_model, path_to_bert_tokenizer, path_to_bert_model)
         self.position_encoder = PositionEncoder(d_model)
         self.linear = nn.Linear(d_model, vocab_size)
