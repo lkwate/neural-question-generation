@@ -1,11 +1,17 @@
-import torch
-import spacy
+from nltk.corpus import stopwords 
+from nltk.tokenize import word_tokenize 
+from nltk.tokenize import sent_tokenize
 import en_core_web_sm
 import json
 import re 
 import unicodedata
+from torch import optim
 from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM
 
+nlp = en_core_web_sm.load()
+nlp_stop_words = set(stopwords.words('english'))
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # definition of constant 
 constant = {
@@ -52,6 +58,9 @@ class BertEmb():
             #self.bertModel = torch.hub.load('huggingface/pytorch-transformers', 'model', 'bert-base-uncased')
             self.bertModel = BertModel.from_pretrained('bert-base-uncased')
             
+        #add token
+        
+            
     def get_id_tokens(self, sentence):
         """
             encode a given sentence by given its corresponding ids in dictionary
@@ -73,50 +82,19 @@ class BertEmb():
         """
         return self.tokenizer.tokenize(sentence)
     
-    def insert_answers_indices(self, sentence, start_answer, end_answer): 
-        """
-            insert the answers boundaries id token in a sequence
-        """
-        before_answer = self.encode(sentence[:start_answer])
-        answer = self.encode(sentence[start_answer:end_answer])
-        after_answer = self.encode(sentence[end_answer:])
-        result = before_answer + [1] + answer + [2] + after_answer
-        return result
     
+    def get_word_emb(self, text):
+        
     
-    def get_word_emb(self, text, start_answer = None, end_answer = None):
-        sentences = sent_tokenize(text)
-        indexed_tokens = []
-        sentences_tagged = []
-        for sent in sentences:
-            tokens_encoded = self.get_id_tokens(sent)
-            indexed_tokens.append(tokens_encoded)
+        indexed_tokens = self.get_id_tokens(text)
         """
             retreiving of word embeddings of the tokens of a given sentence by processing
             sentence through BERTModel
         """
-        sent_index_answer = -1 # index of sentence which content spanned answer
-        if start_answer and end_answer: 
-            
-            index = 0
-            for i in range(len(sentences)):
-                if index <= start_answer and (index + len(sentences[i])) >= end_answer:
-                    start_answer -= index
-                    end_answer -= index
-                    sent_index_answer = i
-                    indexed_tokens[i] = self.insert_answers_indices(sentences[i], start_answer, end_answer)
-                    break
-                index += len(sentences[i])
-        
-        output = []
-        for i_token in indexed_tokens:
-            output.append(self.get_word_emb_by_indices(i_token))
-        output = torch.cat(output, dim = 0)
-       
-        return output
+        output = self.get_word_emb_by_indices(indexed_tokens)
+        return output.to(device)
 
     def get_word_emb_by_indices(self, indexed_tokens): 
-        
         
         segments_tensor = torch.tensor([[1] * len(indexed_tokens)])
         indexed_tokens_tensor = torch.tensor([indexed_tokens])
@@ -134,24 +112,39 @@ class BertEmb():
             batch_segments_tensor = segments_tensor[:, i * batch_size : (i + 1) * batch_size]
             # process segments_tensor and indexed_tokens through bertModel
             with torch.no_grad(): 
-                encoders_layers, _ = self.bertModel(batch_indexed_tokens_tensor, batch_segments_tensor)
-                encoders_layers = encoders_layers[-1].squeeze(0)
+                el, _ = self.bertModel(batch_indexed_tokens_tensor, batch_segments_tensor)
+                #sum of the output of the last four hidden layers
+                el = el[-4].squeeze(0) + el[-3].squeeze(0) + el[-2].squeeze(0) + el[-1].squeeze(0)
                 
-            output.append(encoders_layers)
+            output.append(el)
         
         if remain :
             batch_indexed_tokens_tensor = indexed_tokens_tensor[:, nbatch * batch_size : length]
             batch_segments_tensor = segments_tensor[:, nbatch * batch_size : length]
             with torch.no_grad(): 
-                encoders_layers, _ = self.bertModel(batch_indexed_tokens_tensor, batch_segments_tensor)
-                encoders_layers = encoders_layers[-1].squeeze(0)
-            output.append(encoders_layers)
+                el, _ = self.bertModel(batch_indexed_tokens_tensor, batch_segments_tensor)
+                #sum of the output of the last four hidden layers
+                el = el[-4].squeeze(0) + el[-3].squeeze(0) + el[-2].squeeze(0) + el[-1].squeeze(0)
+            output.append(el)
             
         #concatenate (along the dimension 0 ) the list of output tensor 
         encoders_layers = torch.cat(output, dim = 0)
         ## the result have the shape : (length_tokens, 768)
         encoders_layers.unsqueeze(1)
-        return encoders_layers
+        return encoders_layers.to(device)
+
+# remove stop words
+def remove_stop_words(text): 
+    word_tokens = word_tokenize(text) 
+    filtered_sentence = [w for w in word_tokens if not w in nlp_stop_words] 
+  
+    filtered_sentence = [] 
+  
+    for w in word_tokens: 
+        if w not in nlp_stop_words: 
+            filtered_sentence.append(w) 
+  
+    return " ".join(filtered_sentence)
 
 
 ##build vocabulary 
@@ -239,6 +232,7 @@ class Dataset():
         rule of validation of data in dataset: 
             context cannot be null
             answer a question regarding the context cannot be impossible
+            we retreive question that contains less than 10 words
     '''
     def __init__(self, path_to_dataset): 
         self.dataset = {}
@@ -258,7 +252,7 @@ class Dataset():
                         if len(paragraph['qas']) != 0:
                             self.dataset[index]['qas'] = []
                             for qas in paragraph['qas']: 
-                                if not qas['is_impossible']: 
+                                if not qas['is_impossible'] and len(qas['question'].split()) <= 9: 
                                     question = qas['question']
 
                                     # loop over answers
@@ -271,7 +265,6 @@ class Dataset():
                                         if length_answer <= len(ans['text']): 
                                             end_answer = start_answer + len(ans['text'])
                                     self.dataset[index]['qas'].append((question, start_answer, end_answer))
-
 """
     useful functions to clean up text before process it for tagging 
 """
@@ -465,3 +458,43 @@ class Tagger():
         if start_answer and end_answer: 
             result = self._insert_answer(result, sentence, tokenizer, start_answer, end_answer)
         return result
+
+## linguistic feature extraction
+def ner_extraction(context):
+    dic_ner = {
+        "PERSON" : 0,
+        "NORP" : 0, 
+        "FAC" : 0, 
+        "ORG" : 0,
+        "GPE" : 0,
+        "LOC" : 0,
+        "PRODUCT" : 0, 
+        "EVENT" : 0,
+        "WORK_OF_ART" : 0, 
+        "LAW" : 0, 
+        "LANGUAGE" : 0,
+        "DATE" : 0,
+        "TIME" : 0,
+        "PERCENT" : 0, 
+        "MONEY" : 0, 
+        "QUANTITY" : 0,
+        "ORDINAL" : 0,
+        "CARDINAL" : 0
+    }
+
+    doc = nlp(context)
+    dic = {}
+    revert_dic = {}
+    for ent in doc.ents:
+        label = ent.label_ + " " + str(dic_ner[ent.label_])
+        if ent.text not in dic:
+            dic_ner[ent.label_] += 1
+            revert_dic[label] = ent.text
+            dic[ent.text] = label
+            context = context.replace(ent.text, label)
+    return context, dic, revert_dic
+
+def multireplace(sentence, dic): 
+    for key in dic:
+        sentence = sentence.replace(key, dic[key])
+    return sentence

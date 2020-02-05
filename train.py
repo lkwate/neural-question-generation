@@ -4,7 +4,7 @@ from torch import optim
 import torch.nn as nn 
 
 
-def train(context, start_answer, end_answer, question_text, question_indices, model, optimizer, criterion, dic): 
+def train(context, response, question_text, question_indices, model, optimizer, criterion, dic): 
     """
         assumptions :
             - question indexed_tokens of question provided by bert_tokenizer (with special token)
@@ -12,16 +12,15 @@ def train(context, start_answer, end_answer, question_text, question_indices, mo
     #set grad of optimizer to zero
     optimizer.zero_grad()
     loss = 0
-    #extract response
-    response = context[start_answer:end_answer]
+
     target_length = len(question_indices)
     question = []
-    memory, prob_max = model(context, response, question_text, start_answer, end_answer)
+    memory, prob_max = model(context, response, question_text)
     for di in range(target_length - 1):
         
         target_index = torch.argmax(prob_max[di, :]).item()
         question.append(target_index)
-        loss += criterion(prob_max[di, :].unsqueeze(0), torch.LongTensor([question_indices[di + 1]]))
+        loss += criterion(prob_max[di, :].unsqueeze(0).to(device), torch.LongTensor([question_indices[di + 1]]).to(device))
     
         predicted = " ".join([dic.word_by_id(item) for item in question])
         truth =  " ".join([dic.word_by_id(item) for item in question_indices])
@@ -31,6 +30,43 @@ def train(context, start_answer, end_answer, question_text, question_indices, mo
     optimizer.step()
     
     return loss.item() / target_length, predicted, truth
+
+
+def trainIter(dataset, model, optimizer, criterion, dic, period_display = 50, epoch = 1000): 
+    """
+        loop over dataset and train on each sample.
+    """
+    iter = 1
+    plot_losses = []
+    plot_total_lost = 0
+    for _ in range(epoch): 
+        for data in dataset: 
+            iter += 1
+            context = data['context'].lower()
+            context_replace = remove_stop_words(context)
+            context_replace, dic_context, revert_dic = ner_extraction(context_replace)
+            
+            for qas in data['qas']:
+                question = qas[0]
+                question = multireplace(question, dic_context)
+                response = context[qas[1] : qas[2]]
+                if response == '':
+                    continue
+                response = remove_stop_words(response.lower())
+                response_replace = multireplace(response, dic_context)
+                question_indices = model.embedding.bertEmb.get_id_tokens(question)
+                
+                loss, predicted, truth = train(context_replace, response_replace, question, question_indices, model, optimizer, criterion, dic)
+                plot_total_lost += loss
+                if iter % period_display == 0:
+                    avg_loss = plot_total_lost / period_display
+                    plot_losses.append(avg_loss)
+                    print("loss = %.7f" % (avg_loss))
+                    print("predicted " , predicted)
+                    print("truth ", truth)
+                    print("reponse ", response)
+                    plot_total_lost = 0
+    return plot_losses
 
 def evaluate(model, context, start_answer, end_answer, dic):
     
