@@ -14,30 +14,37 @@ In our educational system, the common form of examination is question forms, the
 
 ## Dependencies
 ```
-	  	pytorch 1.4.0
-	  	python 3.7 
-	  	nltk
-	  	pytorch-pretrained-bert
-	  	pytorch-transformers
+pytorch 1.4.0
+python 3.7 
+nltk
+pytorch-pretrained-bert
+pytorch-transformers
 ```
 to use our systems you need to follow those steps : 
 
 * install dependencies : 
 
 	```
-	  	sudo apt-get install python3.7
-	  	sudo apt-get install python3-pip
-	  	pip install torch torchvision (https://pytorch.org/get-started/locally/ more personalize setup)
-	  	pip install nltk 
-	  	pip install pytorch-pretrained-bert
-	  	pip install pytorch-transformers
+	sudo apt-get install python3.7
+	sudo apt-get install python3-pip
+	pip install torch torchvision (https://pytorch.org/get-started/locally/ to more personalize setup)
+	pip install nltk 
+	pip install pytorch-pretrained-bert
+	pip install pytorch-transformers
 	```
 	
 
-##  Execute
+## Train
 ```
-	  	git clone https://github.com/lkwate/neural-question-generation.git
-	  	cd neural-question-generation
+git clone https://github.com/lkwate/neural-question-generation.git
+cd neural-question-generation
+python train.py
+```
+
+##  Execute
+
+```
+cd neural-question-generation
 ```
 * fill a **.json file** (e.g. context.json) which the follow schema
 ```
