@@ -1,25 +1,18 @@
 from utils import *
 import torch 
 
-def evaluate(model, context, start_answer, end_answer, dic):
-    
-    question = [constant['cls']]
-    max_length_question = constant['max_question_length']
-    with torch.no_grad(): 
-        memory, prob_max = model(context, question, start_answer, end_answer)
-        target_index = torch.argmax(prob_max).item()
-        question.append(target_index)
-        
-        for di in range(1, max_length_question):
-            prob_max = model.decode(question, memory)
-            prob_max = prob_max[di, :].unsqueeze(0)
-            target_index = torch.argmax(prob_max).item()
-            question.append(target_index)
-            
-            if target_index == constant['sep']:
+def evaluate(model, context, start_answer, end_answer, tokenizer, dic, max_length = 30):
+    question_predicted = []
+    with torch.no_grad():
+        for i in range(max_length):
+            indexed_tokens, segments_ids = tokenizer.processContextAnswer(context, start_answer, end_answer)
+            output = model(indexed_tokens, segments_ids, question_predicted)
+            target_index = torch.argmax(output).item()
+            question_predicted.append(target_index)
+            if target_index == 102:
                 break
-                
-    return [dic.word_by_id(item) for item in question]
+        question_predicted = " ".join([dic.word_by_id(w) for w in question_predicted])
+    return question_predicted
 
 
 def load_model(path):
@@ -34,29 +27,27 @@ def load_model(path):
 
 def test(model, dataset, dic, output_path):
     with open(output_path, "a") as file: 
-        for _, data in dataset.items(): 
-            context = data['context']
-            for qas in data['qas']:
-                start_answer = qas[1]
-                end_answer = qas[2]
-                question = evaluate(model, context, start_answer, end_answer, dic)
-                question = " ".join(question)
-                file.write(question)
+        for data in dataset: 
+            context = data[0]
+            start_answer = data[2]
+            end_answer = data[3]
+            question = evaluate(model, context, start_answer, end_answer, dic)
+            file.write(question)
 
             
 if __name__ == '__main__':
 
     #load model from checkpoint 
-    transformer = load_model('./checkpoint/checkpointTransformer.pth')
+    tmodel = load_model('/checkpoint/Model.pth')
 
     #output path
-    output_path = './output_question.txt'
+    output_path = '/output_question.txt'
 
     #load train dataset
-    dataset = Dataset('./data/squad2.0/dev-v2.0.json')
+    dataset = Dataset('/data/squad2.0/dev-v2.0.json')
 
     #load dictionnary
-    dic = Dictionary('./data/tag.json', './pre_trained/bert_base_uncased_tokenizer/vocab.txt')
+    dic = Dictionary('/data/tag.json', '/pre_trained/bert_base_uncased_tokenizer/vocab.txt')
 
     #test
-    test(transformer, dataset, dic, output_path)
+    test(model, dataset, dic, output_path)
