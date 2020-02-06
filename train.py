@@ -26,7 +26,7 @@ def trainBert(model, optimizer, context, question, start_answer, end_answer, cri
     optimizer.step()
     return loss, question_predicted
 
-def trainBertIter(dataset, model, optimizer, criterion, tokenizer, dic, epoch = 10, period_display = 10): 
+def trainBertIter(dataset, model, optimizer, criterion, tokenizer, dic, epoch = 10, period_display = 1000): 
     """
         loop over dataset and train on each sample.
     """
