@@ -27,7 +27,7 @@ to use our systems you need to follow those steps :
 	```
 	  	sudo apt-get install python3.7
 	  	sudo apt-get install python3-pip
-	  	pip install torch torchvision
+	  	pip install torch torchvision (https://pytorch.org/get-started/locally/ more personalize setup)
 	  	pip install nltk 
 	  	pip install pytorch-pretrained-bert
 	  	pip install pytorch-transformers
@@ -74,5 +74,5 @@ to use our systems you need to follow those steps :
 ## evolution at training
 
 
-![alt text](https://github.com/lkwate/neural-question-generation/master/training.jpg)
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/training.jpg)
 
