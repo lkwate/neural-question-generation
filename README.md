@@ -76,7 +76,7 @@ cd neural-question-generation
 * execute this command to launch
 
 ```
-	  	pyton eval.py
+pyton eval.py
 ```
 ## evolution at training
 
