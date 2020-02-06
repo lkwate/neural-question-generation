@@ -38,7 +38,7 @@ def test(model, dataset, dic, output_path):
 if __name__ == '__main__':
 
     #load model from checkpoint 
-    tmodel = load_model('/checkpoint/Model.pth')
+    model = load_model('/checkpoint/checkpointModel.pth')
 
     #output path
     output_path = '/output_question.txt'
