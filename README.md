@@ -1,4 +1,4 @@
-# neural-question-generation
+# question-generation
 system based on Bert model, which generate question for question answering based on text corpus
 
 ## Introduction 
