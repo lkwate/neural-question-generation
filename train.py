@@ -1,5 +1,4 @@
 from utils import *
-from transformer.model import *
 from torch import optim
 import torch.nn as nn 
 from bertModel.model import BertQG

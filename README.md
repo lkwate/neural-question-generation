@@ -1,5 +1,8 @@
 # question-generation
-system based on Bert model, which generate question for question answering based on text corpus
+Our system is based on BERT model and Transformer, which generate question for question answering based on text corpus. 
+
+Some person who know about current literature of natural language processing may be wondering that our system is based on BERT model and Transformer separately.  
+
 
 ## Introduction 
 In our educational system, the common form of examination is question forms, the teacher is generally tasked to design question forms, for student. To reach the general education purpose which try to improve understanding of the student about a specific knowledge, it is important to design the relevant questions to evaluate the skills of the student in this specific knowledge. We designed a system which try to produce tex comprehension question based on a given corpus. the system designed is unilingual (English). the system will be benefit for educators by saving his time for generate question forms.  
@@ -9,10 +12,11 @@ In our educational system, the common form of examination is question forms, the
 * Merge the two systems to form an auto evaluation system 
 
 ## Description
-### Model
-	our system is a fine tuned Bert Model for question generation task
+### Architecture of model
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/architecture.jpeg)
 
 ## Dependencies
+
 ```
 pytorch 1.4.0
 python 3.7 
@@ -78,7 +82,7 @@ cd neural-question-generation
 ```
 pyton eval.py
 ```
-## evolution at training
+## Result
 
 
 ![alt text](https://github.com/lkwate/neural-question-generation/blob/master/training.jpg)
