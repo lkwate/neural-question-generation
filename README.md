@@ -1,7 +1,7 @@
 # question-generation
 Our system is based on BERT model and Transformer, which generate question for question answering based on text corpus. 
 
-Some person who know about current literature of natural language processing may be wondering that our system is based on BERT model and Transformer separately.  
+Some person who have knowledge about current literature of natural language processing may be wondering that our system is based on BERT model and Transformer separately.  
 
 
 ## Introduction 
@@ -84,6 +84,4 @@ pyton eval.py
 ```
 ## Result
 
-
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/training.jpg)
-
+## Score
