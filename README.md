@@ -64,7 +64,7 @@ cd neural-question-generation
     	                "answers" : [
     	                  {
     	                    "text" : "response",
-    	                    "answer_start" : index where answer begining
+    	                    "answer_start" : index at which answer begin
     	                  },{...}
     	                ]
     	              },{...}
