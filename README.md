@@ -13,7 +13,7 @@ In our educational system, the common form of examination is question forms, the
 
 ## Description
 ### Architecture of model
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/architecture.jpg)
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/architecture.jpg)
 
 ## Dependencies
 
@@ -31,57 +31,101 @@ to use our systems you need to follow those steps :
 	```
 	sudo apt-get install python3.7
 	sudo apt-get install python3-pip
-	pip install torch torchvision (https://pytorch.org/get-started/locally/ to more personalize setup)
-	pip install nltk 
-	pip install pytorch-pretrained-bert
-	pip install pytorch-transformers
+	pip3 install torch torchvision (https://pytorch.org/get-started/locally/ to more personalize setup)
+	pip3 install nltk 
+	pip3 install pytorch-pretrained-bert
+	pip3 install pytorch-transformers
+	pip3 install flask-cors
 	```
-	
+## Dataset
+we use the recently updated SQUAD v.2
 
 ## Train
 ```
 git clone https://github.com/lkwate/neural-question-generation.git
 cd neural-question-generation
-python train.py
+python3 train.py
 ```
 
-##  Execute
+this will take a few days depending on the architecture and power of your computer
 
+## How to use 
 ```
 cd neural-question-generation
+FLASK_ENV=development python3 launch.py
 ```
-* fill a **.json file** (e.g. context.json) which the follow schema
-```
-  	 {
-    	  "data" : [
-    	    {
-    	    	"paragraphs" : [
-    	          {
-    	            "context" : "paragraph context",
-    	            "qas" : [
-    	              {
-    	                "question" : "text", 
-    	                "answers" : [
-    	                  {
-    	                    "text" : "response",
-    	                    "answer_start" : index at which answer begin
-    	                  },{...}
-    	                ]
-    	              },{...}
-    	            ]
-    	          },{...}
-    	        ]
-    	    },{...}
-    	 ]
-    }
-```
-* modify the path of **.json** (in **eval.py at line 55**) from where data will be fetch to generate question 
+go to link [welcome](http://127.0.0.1:5000)
 
-* execute this command to launch
+### add context
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/add_context.png)
+### select answer in context
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/select_spanned_answer.png)
+### add answer
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/add_answer.png)
+### generate question 
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/generate_question.png)
 
-```
-pyton eval.py
-```
 ## Result
 
-## Score
+<h2>Some predictions on testing step :</h2>
+<table>
+  <tr>
+    <th>Context</th>
+    <th> The French administration, reluctant to return their pre-war possessions to German companies, reassigned some of them to French companies. This was particularly the case for the Société financière des caoutchoucs, which obtained plantations put into operation during the German period and became the largest company in Cameroon under French mandate. Roads were being built to link the main cities together, as well as various infrastructure such as bridges and airports</th>
+    <th>answer</th>
+  </tr>
+  <tr>
+    <td rowspan="2">Question predicted</td>
+    <td>what were the main types of buildings in the area?</td>
+    <td>bridges and airports</td>
+  </tr>
+  <tr>
+    <td>what were the main types of buildings in the area?</td>
+    <td>Roads</td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Context</th>
+    <th>The Douala-Yaoundé railway line, begun under the German regime, had been completed. Thousands of workers were forcibly deported to this site to work fifty-four hours a week. Workers also suffered from lack of food and the massive presence of mosquitoes. In 1925, the mortality rate on the site was 61.7%. However, the other sites were not as deadly, although working conditions were generally very harsh</th>
+    <th>answer</th>
+  </tr>
+  <tr>
+    <td rowspan="4">Question predicted</td>
+    <td>how were the people in the city killed?</td>
+    <td>fifty-four hours a week</td>
+  </tr>
+  <tr>
+    <td>how many people were killed in the death of the people in the city?</td>
+    <td>Thousands of workers</td>
+  </tr>
+  <tr>
+    <td>what company built the first building in the south east?</td>
+    <td>German regime</td>
+  </tr>
+  <tr>
+    <td>what was the name of the new delhi river?</td>
+    <td>The Douala-Yaoundé railway line</td>
+  </tr>
+</table>
+
+<h2>The BLEU scores on dev set are :</h2>
+<table>
+  <tr>
+    <th></th>
+    <th>BLEU-1</th>
+    <th>BLEU-2</th>
+    <th>BLEU-3</th>
+    <th>BLEU-4</th>  
+  </tr>
+  <tr>
+    <td>Dev set</td>
+    <td>24.88</td>
+    <td>22.11</td>
+    <td>21.68</td>
+    <td>20.51</td>
+  </tr>
+</table>
+
+

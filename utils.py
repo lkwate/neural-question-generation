@@ -1,50 +1,42 @@
-import torch
 import json
 import random
 from tqdm import tqdm
-from transformers import BertTokenizer
+from pytorch_transformers import BertTokenizer
 #from transformers import BertTokenizer
 from nltk.tokenize import sent_tokenize # to tokenize paragraph in sentence
-import nltk # to compute BLEU score of outputs question
-
-## import about transformer model
+import nltk
+nltk.download('punkt')
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
-from torch import optim
-from pytorch_pretrained_bert import BertModel
-
-from torch.nn import Transformer
 
 
 #retreive device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 #definition of constant
 constant = {
     'd_model' : 512,  ## dimension of simple model's features
     'nhead' : 8,   ## number of head in multihead attention
-    'max_question_length' : 30,  ## max length of question,
+    'max_question_length' : 15,  ## max length of question,
     'number_layer' : 6,  ## depth of stack of layers
     'learning_rate' : 5e-5,  ## learning rate of optimizer
     'vocab_size' : 30522,  ## vocabulary size
     'dropout' :  0.1,  ## dropout hyperparameter for regularization
-    'd_emb' : 768, ## dimension of word embeddings provide by model-base-uncased
+    'd_emb' : 768, ## dimension of word embeddings provide by bertModel-base-uncased
     'start_answer_token' : 1,  ## token follow by the answer spanned in the context
     'end_answer_token' : 2,  ## the end token of the answer spanned in the context
     'pad' : 0,  ## pad token
     'cls' : 101,  ## cls token, begin token of sequence
     'sep' : 102,  ## separate token
     'mask' : 103,  ## mask token
-    'batch_size' : 32, ## batch size
-    'epoch' : 10 ## number of times training will be repeat
+    'batch_size' : 16, ## batch size
+    'epoch' : 2 ## number of times training will be repeat
 }
 
 #tokenizer 
 class Tokenizer():
 
     def __init__(self, path_to_tokenizer):
+	    ##self.tokenizer = tokenizer = torch.hub.load('huggingface/pytorch-transformers', 'tokenizer', 'bert-base-uncased')
         self.tokenizer = BertTokenizer.from_pretrained(path_to_tokenizer)
 
     def tokenize(self, input):
@@ -72,8 +64,8 @@ class Tokenizer():
         output = self.tokenizer.convert_tokens_to_string(output)
         return output
 
-
 #building of dataset based on SUAD2.0
+# dataset
 # dataset
 class Dataset():
     '''

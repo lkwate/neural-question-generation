@@ -1,16 +1,14 @@
 from utils import *
-
+from tqdm import tqdm
 from torch import optim
 import torch.nn as nn
 import torch
-from model.model import TransformerModel
-from utils import *
+from model import TransformerModel
 
-
+#Training step
 def trainStep(model, optimizer, criterion, tokenizer, batch):
     optimizer.zero_grad()
     loss = 0
-
     for batch_item in batch:
         context = batch_item[0]
         question = batch_item[1]
@@ -21,14 +19,20 @@ def trainStep(model, optimizer, criterion, tokenizer, batch):
         indexed_tokens_question, segments_ids_question = tokenizer.processQuestion(question)
         indexed_tokens_context, segments_ids_context = tokenizer.processContextAnswer(context, start_answer, end_answer)
 
-        memory, output = model(indexed_tokens_context, segments_ids_context, indexed_tokens_question,
-                               segments_ids_question)
+        memory, output = model(indexed_tokens_context=indexed_tokens_context, segments_ids_context=segments_ids_context,
+                               indexed_tokens_question=[indexed_tokens_question[0]],
+                               segments_ids_question=[segments_ids_question[0]])
 
-        for qi in range(len(indexed_tokens_question) - 1):
-            loss += criterion(output[qi, :].unsqueeze(0),
-                              torch.LongTensor([indexed_tokens_question[qi + 1]]).to(device))
-            target_index = torch.argmax(output[qi, :]).item()
+        for qi in range(1, len(indexed_tokens_question) - 1):
+            target_index = torch.argmax(output[-1, :]).item()
             question_predicted.append(target_index)
+            loss += criterion(output[-1, :].unsqueeze(0), torch.LongTensor([indexed_tokens_question[qi]]).to(device))
+            output = model(memory=memory, indexed_tokens=indexed_tokens_question[: qi + 1],
+                           segments_ids=segments_ids_question[: qi + 1], decode=True)
+        # last tokens
+        loss += criterion(output[-1, :].unsqueeze(0), torch.LongTensor([indexed_tokens_question[-1]]).to(device))
+        target_index = torch.argmax(output[-1, :]).item()
+        question_predicted.append(target_index)
 
     # compute gradient of loss function
     loss.backward()
@@ -36,10 +40,13 @@ def trainStep(model, optimizer, criterion, tokenizer, batch):
     # update parameter
     optimizer.step()
 
+    del indexed_tokens_context, indexed_tokens_question, output
+
     return loss, question_predicted, question
 
 
-def trainTBertIter(dataset, model, optimizer, criterion, tokenizer, num_epoch=10, period_display=17):
+def trainTBertIter(dataset, model, optimizer, criterion, tokenizer, epoch=1, iteration=1, num_epoch=10,
+                   period_display=17):
     """
         loop over dataset and train on each sample.
     """
@@ -53,16 +60,16 @@ def trainTBertIter(dataset, model, optimizer, criterion, tokenizer, num_epoch=10
     batch_size = constant['batch_size']
     niter = len(dataset) // batch_size
     remain = len(dataset) == niter * batch_size
-
-    for ep in tqdm(range(constant['epoch'])):
-        for j in tqdm(range(niter)):
+    print(epoch, iteration)
+    for ep in tqdm(range(epoch, constant['epoch'])):
+        for j in tqdm(range(iteration, niter)):
             batch = dataset[j * batch_size: (j + 1) * batch_size]
             loss, last_predicted, last_truth = trainStep(model, optimizer, criterion, tokenizer, batch)
             plot_total_loss += loss.item()
             plot_total_loss_epoch += loss.item()
 
             if j % period_display == 1:
-                avg_loss = plot_total_loss / (2 * batch_size)
+                avg_loss = plot_total_loss / (period_display * batch_size)
                 plot_losses.append(avg_loss)
                 last_predicted = tokenizer.decode(last_predicted)
                 print("loss = %.7f " % (avg_loss))
@@ -95,10 +102,11 @@ def trainTBertIter(dataset, model, optimizer, criterion, tokenizer, num_epoch=10
         torch.save(checkPointModel, pathCheckpoint)
     return plot_losses
 
+
 if __name__ == '__main__':
 
     #load dic
-    model = TransformerModel('./pre_trained/bert_base_uncased_model')
+    model = TransformerModel('./pre_trained/bert_base_uncased_model/')
 
     #optimizer
     adamOptimizer = optim.Adam(model.parameters(), lr=constant['learning_rate'])
@@ -110,10 +118,9 @@ if __name__ == '__main__':
     tokenizer = Tokenizer('./pre_trained/bert_base_uncased_tokenizer')
     
     # load dataset 
-    dataset = Dataset('/data/squad2.0/train-v2.0.json')
+    dataset = Dataset('./data/squad2.0/train-v2.0.json')
 
 
     #begin training 
-    #trainIter
-    trainTBertIter(dataset.dataset, model, adamOptimizer, criterion, tokenizer)
+    trainTBertIter(dataset.dataset, model, adamOptimizer, criterion, tokenizer, epoch = 1, iteration = 1)
 
