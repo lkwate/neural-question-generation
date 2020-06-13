@@ -7,8 +7,6 @@ from model import QGModel
 app = Flask(__name__)
 CORS(app)
 
-#load model
-model = QGModel(configT5_model, config['path_t5_question_generation'])
 
 @app.route('/')
 def welcome():
@@ -24,16 +22,15 @@ def predit():
         if 'answers' in data:
             answers = data['answers']
 
-        response = []
         list_dict_answers = []
         for ans in answers:
             list_dict_answers.append({'start_ans' : ans['start_answer'], 'end_ans' : ans['end_answer']})
 
-        response = generate(model, tokenizer, context, device, answers)
+        response = generate(model, tokenizer, context, device, list_dict_answers)
         response = jsonify({'questions' : response})
         return response
 
 if __name__ == "__main__":
     app.run(debug=True)
-
+    model = QGModel(configT5_model, config['path_t5_question_generation'])
     
