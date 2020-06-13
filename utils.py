@@ -1,120 +1,99 @@
-import json
-import random
-from tqdm import tqdm
-from pytorch_transformers import BertTokenizer
-#from transformers import BertTokenizer
-from nltk.tokenize import sent_tokenize # to tokenize paragraph in sentence
-import nltk
-nltk.download('punkt')
+import numpy as np
+import pandas as pd
 import torch
+import random
+import json
+from transformers import T5Tokenizer, T5ForConditionalGeneration, T5Config
+from torch.utils.data import Dataset, DataLoader, random_split
+import spacy
+spacy_nlp = spacy.load("en_core_web_sm")
 
-
-#retreive device
-#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
-#definition of constant
-constant = {
-    'd_model' : 512,  ## dimension of simple model's features
-    'nhead' : 8,   ## number of head in multihead attention
-    'max_question_length' : 15,  ## max length of question,
-    'number_layer' : 6,  ## depth of stack of layers
-    'learning_rate' : 5e-5,  ## learning rate of optimizer
-    'vocab_size' : 30522,  ## vocabulary size
-    'dropout' :  0.1,  ## dropout hyperparameter for regularization
-    'd_emb' : 768, ## dimension of word embeddings provide by bertModel-base-uncased
-    'start_answer_token' : 1,  ## token follow by the answer spanned in the context
-    'end_answer_token' : 2,  ## the end token of the answer spanned in the context
-    'pad' : 0,  ## pad token
-    'cls' : 101,  ## cls token, begin token of sequence
-    'sep' : 102,  ## separate token
-    'mask' : 103,  ## mask token
-    'batch_size' : 16, ## batch size
-    'epoch' : 2 ## number of times training will be repeat
+config = {
+    "end_token" : "</s>",
+    "start_ans" : "<extra_id_1>",
+    "end_ans" : "<extra_id_1>",
+    "batch_size" : 8,
+    "max_len_context" : 512,
+    "max_len_question" : 20,
+    "task" : "ask_question",
+    "epoch" : 2,
+    "path_t5_question_generation" : "./pre-trained-model/t5-question-generation/",
+    "learning_rate" : 5e-5,
+    "schedule_rate" : 0.83,
+    "period_decay" : 3,
+    "accumulation_step" : 256,
 }
 
-#tokenizer 
-class Tokenizer():
+config_ask_question = {
+    "early_stopping": True,
+    "max_length" : 20,
+    "min_length" : 3,
+    "num_beams" : 4,
+    "prefix" : "ask_question"
+}
 
-    def __init__(self, path_to_tokenizer):
-	    ##self.tokenizer = tokenizer = torch.hub.load('huggingface/pytorch-transformers', 'tokenizer', 'bert-base-uncased')
-        self.tokenizer = BertTokenizer.from_pretrained(path_to_tokenizer)
+# Tokenizer
+class Tokenizer:
+    def __init__(self, ):
+        self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
-    def tokenize(self, input):
-        return self.tokenizer.tokenize(input)
+    def encode_context(self, context, start_ans, end_ans):
+        """
+            this functin is used to encode the context with highlighting the positions of answer
+            format of input context : "aks_question : context <start_ans> answer <end_answer> context </s>"
 
-    def processContextAnswer(self, context, start_answer, end_answer):
-        before_answer = self.tokenizer.encode(context[:start_answer], add_special_tokens=False)
-        answer = self.tokenizer.encode(context[start_answer: end_answer], add_special_tokens=False)
-        after_answer = self.tokenizer.encode(context[end_answer:], add_special_tokens=False)
-        indexed_tokens = [constant['cls']] + before_answer + [constant['start_answer_token']] + answer + [
-            constant['end_answer_token']] + after_answer + [constant['sep']]
-        segments_tokens = [1] * len(indexed_tokens)
-
-        return indexed_tokens, segments_tokens
-
-    def processQuestion(self, question):
-        question_tokens = [constant['cls']] + self.tokenizer.encode(question, add_special_tokens=False) + [
-            constant['sep']]
-        question_segments = [1] * len(question_tokens)
-
-        return question_tokens, question_segments
-
-    def decode(self, input_ids):
-        output = self.tokenizer.convert_ids_to_tokens(input_ids)
-        output = self.tokenizer.convert_tokens_to_string(output)
+            return dict{input_ids, attention_mask, token_type_ids}
+        """
+        before_ans = context[:start_ans]
+        ans = context[start_ans:end_ans]
+        after_ans = context[end_ans:]
+        input = config['task'] + before_ans + config['start_ans'] + ans + config['end_ans'] + after_ans + " " + config[
+            'end_token']
+        output = self.tokenizer.encode_plus(input, max_length=config['max_len_context'], pad_to_max_length=True)
         return output
 
-#building of dataset based on SUAD2.0
+    def encode_question(self, question):
+        """
+            this function is used to encode the question
+            format of input question : "question </s>"
+            output : list of input_ids
+        """
+        input = question + " " + config['end_token']
+        output = self.tokenizer.encode_plus(input, max_length=config['max_len_question'], pad_to_max_length=True)
+        return output
+
+
 # dataset
-# dataset
-class Dataset():
-    '''
-        rule of validation of data in dataset:
-            context cannot be null
-            answer a question regarding the context cannot be impossible
-    '''
+class QDataset(Dataset):
 
-    def __init__(self, path_to_dataset):
-        self.dataset = []
-        with open(path_to_dataset) as json_file:
+    def __init__(self, filename, tokenizer):
+        self.data = pd.read_csv(filename)
+        self.tokenizer = tokenizer
+        self.shuffle()
 
-            data = json.load(json_file)
-            for batch_data in data['data']:
+    def shuffle(self):
+        self.data = self.data.sample(frac=1)
 
-                for paragraph in batch_data['paragraphs']:
-                    if paragraph['context']:
-                        context = paragraph['context']
+    def __len__(self):
+        return len(self.data)
 
-                        # loop over question and answers for a given context
-                        if len(paragraph['qas']) != 0:
-                            for qas in paragraph['qas']:
-                                if not qas['is_impossible']:
-                                    question = qas['question']
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        item = self.data.iloc[idx]
+        context, question, start_ans, end_ans = item['context'], item['question'], item['start_ans'], item['end_answer']
+        input_dict, output_dict = self.tokenizer.encode_context(context, start_ans,
+                                                                end_ans), self.tokenizer.encode_question(question)
+        return input_dict['input_ids'], input_dict['attention_mask'], output_dict['input_ids'], output_dict[
+            'attention_mask']
 
-                                    # ignore question which length is less than 3
-                                    if len(question) <= 2:
-                                        continue
+configT5_model = T5Config.from_pretrained('t5-base')
+configT5_model.task_specific_params[config['task']] = config_ask_question
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-                                    # loop over answers
-                                    length_answer = -1
-                                    start_answer = 10e4
-                                    end_answer = None
-                                    for ans in qas['answers']:
-                                        if ans['answer_start'] < start_answer:
-                                            start_answer = ans['answer_start']
-                                        if length_answer <= len(ans['text']):
-                                            end_answer = start_answer + len(ans['text'])
-                                        response = context[start_answer: end_answer]
+# set up tokenizer and dataset
+tokenizer = Tokenizer()
+train_dataset = QDataset('./data/squad2.0/train_squad2.0.csv', tokenizer)
+valid_dataset = QDataset('./data/squad2.0/valid_squad2.0.csv', tokenizer)
 
-                                    if response == '':
-                                        continue
-
-                                    index = 0
-                                    for sentence in sent_tokenize(context):
-                                        j = sentence.find(response)
-                                        if j != -1 and index <= start_answer and (index + len(sentence)) >= end_answer:
-                                            self.dataset.append((sentence, question, j, j + len(response)))
-                                            break
-                                        index += len(sentence)
-        # shuffle item in dataset
-        random.shuffle(self.dataset)
+train_loader, valid_loader = DataLoader(train_dataset, batch_size=config['batch_size']), DataLoader(valid_dataset, batch_size=config['batch_size'])

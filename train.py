@@ -1,126 +1,54 @@
-from utils import *
-from tqdm import tqdm
-from torch import optim
-import torch.nn as nn
+from utils import train_dataset, valid_dataset, config, tokenizer, configT5_model, device
 import torch
-from model import TransformerModel
+from torch import optim
+from torch.utils.data import DataLoader
+from evaluation import evaluate
+from model import QGModel
+from tqdm import tqdm
+import json
 
-#Training step
-def trainStep(model, optimizer, criterion, tokenizer, batch):
+def trainEpoch(model, optimizer, train_data_loader, valid_data_loader, tokenizer, device):
+    model.train()
     optimizer.zero_grad()
-    loss = 0
-    for batch_item in batch:
-        context = batch_item[0]
-        question = batch_item[1]
-        start_answer = batch_item[2]
-        end_answer = batch_item[3]
+    losses = []
 
-        question_predicted = []
-        indexed_tokens_question, segments_ids_question = tokenizer.processQuestion(question)
-        indexed_tokens_context, segments_ids_context = tokenizer.processContextAnswer(context, start_answer, end_answer)
+    for step, batch in enumerate(tqdm(train_data_loader)):
+        input_ids_ctx = torch.stack(batch[0], dim=1).to(device)
+        attention_mask_ctx = torch.stack(batch[1], dim=1).to(device)
+        input_ids_qt = torch.stack(batch[2], dim=1).to(device)
+        attention_mask_qt = torch.stack(batch[3], dim=1).to(device)
 
-        memory, output = model(indexed_tokens_context=indexed_tokens_context, segments_ids_context=segments_ids_context,
-                               indexed_tokens_question=[indexed_tokens_question[0]],
-                               segments_ids_question=[segments_ids_question[0]])
+        loss, _, _, _ = model(input_ids_ctx, attention_mask_ctx, input_ids_qt=input_ids_qt, attention_mask_qt=attention_mask_qt)
+        loss /= config['accumulation_step']
+        loss.backward()
 
-        for qi in range(1, len(indexed_tokens_question) - 1):
-            target_index = torch.argmax(output[-1, :]).item()
-            question_predicted.append(target_index)
-            loss += criterion(output[-1, :].unsqueeze(0), torch.LongTensor([indexed_tokens_question[qi]]).to(device))
-            output = model(memory=memory, indexed_tokens=indexed_tokens_question[: qi + 1],
-                           segments_ids=segments_ids_question[: qi + 1], decode=True)
-        # last tokens
-        loss += criterion(output[-1, :].unsqueeze(0), torch.LongTensor([indexed_tokens_question[-1]]).to(device))
-        target_index = torch.argmax(output[-1, :]).item()
-        question_predicted.append(target_index)
+        if (step + 1) % config['accumulation_step'] == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+            losses.append(loss.item())
+    score, predictions = evaluate(model, valid_data_loader, tokenizer, device)
 
-    # compute gradient of loss function
-    loss.backward()
+    return score, predictions
 
-    # update parameter
-    optimizer.step()
+# global training
+def globalTraining(model, optimizer, train_dataset, valid_dataset, tokenizer, device):
+    model.to(device)
+    for epoch in range(config['epoch']):
+        train_data_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=config['batch_size'], shuffle=False)
+        losses, prediction = trainEpoch(model, optimizer, train_data_loader, valid_data_loader, tokenizer, device)
 
-    del indexed_tokens_context, indexed_tokens_question, output
+        # print information
+        print("Epoch {}/{}, loss = {} ----> {}".format(epoch + 1, config['epoch'], losses[0], losses[-1]))
+        model.t5_model.save_pretrained(config['path_t5_question_generation'])
 
-    return loss, question_predicted, question
-
-
-def trainTBertIter(dataset, model, optimizer, criterion, tokenizer, epoch=1, iteration=1, num_epoch=10,
-                   period_display=17):
-    """
-        loop over dataset and train on each sample.
-    """
-    iter = 1
-    plot_losses = []
-    plot_losses_epoch = []
-    plot_total_loss = 0
-    plot_total_loss_epoch = 0
-
-    # number of iteration in one batch
-    batch_size = constant['batch_size']
-    niter = len(dataset) // batch_size
-    remain = len(dataset) == niter * batch_size
-    print(epoch, iteration)
-    for ep in tqdm(range(epoch, constant['epoch'])):
-        for j in tqdm(range(iteration, niter)):
-            batch = dataset[j * batch_size: (j + 1) * batch_size]
-            loss, last_predicted, last_truth = trainStep(model, optimizer, criterion, tokenizer, batch)
-            plot_total_loss += loss.item()
-            plot_total_loss_epoch += loss.item()
-
-            if j % period_display == 1:
-                avg_loss = plot_total_loss / (period_display * batch_size)
-                plot_losses.append(avg_loss)
-                last_predicted = tokenizer.decode(last_predicted)
-                print("loss = %.7f " % (avg_loss))
-                print("predicted : ", last_predicted)
-                print("truth : ", last_truth)
-                plot_total_loss = 0
-        if remain:
-            batch = dataset[niter * batch_size:]
-            loss, last_predicted, last_truth = trainStep(model, optimizer, criterion, tokenizer, batch)
-            plot_total_loss = loss.item()
-            plot_total_loss_epoch += loss.item()
-            avg_loss = plot_total_loss / (len(dataset) - niter * batch_size)
-            plot_losses.append(avg_loss)
-            plot_total_loss = 0
-
-        plot_losses_epoch.append(plot_total_loss_epoch)
-        plot_total_loss_epoch = 0
-
-        # save model
-        pathCheckpoint = './checkpointModel.pth'
-        checkPointModel = {
-            'model': model,
-            'optimizer': optimizer,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'epoch': ep,
-            'plot_losses': plot_losses,
-            'plot_losses_epoch': plot_losses_epoch
-        }
-        torch.save(checkPointModel, pathCheckpoint)
-    return plot_losses
-
+        with open("./prediction/losses{}.json".format(epoch + 1), "w") as file:
+            json.dump(losses, file)
+        with open("./prediction/prediction{}.json".format(epoch + 1), "w") as file:
+            json.dump(prediction, file)
 
 if __name__ == '__main__':
-
-    #load dic
-    model = TransformerModel('./pre_trained/bert_base_uncased_model/')
-
-    #optimizer
-    adamOptimizer = optim.Adam(model.parameters(), lr=constant['learning_rate'])
-
-    #loss function
-    criterion = nn.CrossEntropyLoss()
-
-    #tokenizer
-    tokenizer = Tokenizer('./pre_trained/bert_base_uncased_tokenizer')
-    
-    # load dataset 
-    dataset = Dataset('./data/squad2.0/train-v2.0.json')
-
-
-    #begin training 
-    trainTBertIter(dataset.dataset, model, adamOptimizer, criterion, tokenizer, epoch = 1, iteration = 1)
-
+    model = QGModel(configT5_model)
+    optimizer = optim.Adam(model.parameters())
+    scheduler = optim.lr_scheduler.StepLR(optimizer, 3, config['schedule_rate'])
+    globalTraining(model, optimizer, train_dataset, valid_dataset, tokenizer, device)

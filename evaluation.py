@@ -1,69 +1,89 @@
-from model import *
+from utils import valid_loader, tokenizer, device, configT5_model, config, spacy_nlp
+from model import QGModel
 import torch
-from utils import *
+from tqdm import tqdm
+from torchtext.data.metrics import bleu_score
+import json
+from langdetect import detect
 
 
-def evaluate(model, context, start_answer, end_answer, tokenizer, max_length = constant['max_question_length']):
-    question_predicted = []
-    with torch.no_grad():
-        indexed_tokens_context, segments_ids_context = tokenizer.processContextAnswer(context, start_answer, end_answer)
-        indexed_tokens_question = [constant['cls']]
-        segments_ids_question  = [1]
-        memory, output = model(indexed_tokens_context=indexed_tokens_context, segments_ids_context=segments_ids_context, indexed_tokens_question=indexed_tokens_question, segments_ids_question=segments_ids_question)
-        for i in range(max_length):
-            target_index = torch.argmax(output[-1, :]).item()
-            question_predicted.append(target_index)
-            if target_index == 102:
-                break
-            indexed_tokens_question.append(target_index)
-            segments_ids_question.append(1)
-            output = model(memory = memory, indexed_tokens=indexed_tokens_question, segments_ids=segments_ids_question, decode = True)
-
-        question_predicted = tokenizer.tokenizer.decode(question_predicted)
-    return question_predicted
+def bleu(candidate, reference):
+    candidate = [candidate.lower().split()]
+    reference = [[reference.lower().split()]]
+    return bleu_score(candidate, reference)
 
 
-def test(model, dataset, tokenizer, output_path):
-    data = {}
-    data['predictions'] = []
-    data['bleu_score'] = 0
-    with open(output_path, "w") as file: 
-        for data in dataset:
-            prediction = {}
-            context = data[0]
-            start_answer = data[2]
-            end_answer = data[3]
-            truth_question = data[1]
-            question = evaluate(model, context, start_answer, end_answer, tokenizer)
-            prediction['True'] = truth_question
-            prediction['Predicted'] = question
-            prediction['bleu_score'] = 0
-            data['predictions'].append(prediction)
-        json.dump(data, file)
-
-def load_model(path):
-    checkpoint = torch.load(path, map_location=device)
-    model = TransformerModel('./pre_trained/bert_base_uncased_model/')
-    model_state_dict = checkpoint['model_state_dict']
-    #for key in model.state_dict().keys():
-    #    model_state_dict[key] = model_state_dict.pop("module." + key)
-    model.load_state_dict(model_state_dict)
+def evaluate(model, data_loader, tokenizer, device):
+    predictions = []
+    score = 0
     model.eval()
-    return model
-            
-#if __name__ == '__main__':
 
-    #load model from checkpoint 
-    #model = load_model('./checkpoint/checkpointModel.pth')
+    with torch.no_grad():
+        for _, batch in enumerate(tqdm(data_loader)):
+            input_ids_ctx = torch.stack(batch[0], dim=1).to(device)
+            input_ids_qt = torch.stack(batch[2], dim=1).to(device)
+            output = model.predict(input_ids_ctx)
 
-    #tokenizer
-    #tokenizer = Tokenizer('./pre_trained/bert_base_uncased_tokenizer/')
+            for k in range(output.shape[0]):
+                ground_truth = tokenizer.tokenizer.decode(input_ids_qt[k].tolist())
+                predicted_question = tokenizer.tokenizer.decode(output[k].tolist())
+                temp_score = bleu(predicted_question, ground_truth)
+                score += temp_score
+                predictions.append((ground_truth, predicted_question, temp_score))
+        score /= len(predictions)
 
-    #output path
-    #output_path = './output/output_question.json'
+    return score, predictions
 
-    #load train dataset
-    #dataset = Dataset('./data/squad2.0/dev-v2.0.json')
 
-    #test
-    #test(model, dataset, tokenizer, output_path)
+def generate(model, tokenizer, context, device, list_dict_answers=None):
+    # check the length of context
+    if len(tokenizer.tokenizer.tokenize(context)) >= config['max_len_context'] - 4:
+        raise ValueError("context too long")
+
+    # check whether the context is in english
+    lang = detect(context)
+    if lang != 'en':
+        raise ValueError('context should be in english')
+
+    # define inputs of the model
+    input_ids = []
+
+    # preprocessing
+    # name entity extraction
+    ner = spacy_nlp(context)
+    batch_size = len(ner.ents)
+    answers = []
+    for ent in ner.ents:
+        temp_dict = tokenizer.encode_context(context, ent.start_char, ent.end_char)
+        input_ids.append(temp_dict['input_ids'])
+        answers.append(ent.text)
+
+    if list_dict_answers is not None:
+        for item in list_dict_answers:
+            start_ans, end_ans = item['start_ans'], item['end_ans']
+            answer = context[start_ans:end_ans]
+            tem_dict = tokenizer.encode_context(context, start_ans, end_ans)
+            input_ids.append(temp_dict['input_ids'])
+            answers.append(answer)
+            batch_size += 1
+
+    input_ids = torch.LongTensor(input_ids).to(device)
+
+    # predict question
+    results = []
+    for k in range(batch_size):
+        predicted_question = model.predict(input_ids[k].unsqueeze(0).to(device)).squeeze(0)
+        results.append(
+            {
+                "question": tokenizer.tokenizer.decode(predicted_question.tolist()),
+                "answer": answers[k]
+            }
+        )
+
+    return results
+
+if __name__ == '__main__':
+    model = QGModel(configT5_model, config['path_t5_question_generation']).to(device)
+    _, predictions = evaluate(model, valid_loader, tokenizer, device)
+    with open('./prediction/prediction.json', 'w') as file:
+        json.dumps(predictions, file)

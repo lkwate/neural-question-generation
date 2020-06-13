@@ -1,16 +1,14 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
-from nltk.tokenize import sent_tokenize # to tokenize paragraph in sentence
-from evaluation import evaluate
+from evaluation import evaluate, generate
 from utils import *
-from evaluation import load_model
-from model import *
+from model import QGModel
 
 app = Flask(__name__)
 CORS(app)
 
-tokenizer = Tokenizer('./pre_trained/bert_base_uncased_tokenizer')
-model = load_model('./checkpoint/newCheckpoint.pth')
+#load model
+model = QGModel(configT5_model, config['path_t5_question_generation'])
 
 @app.route('/')
 def welcome():
@@ -22,34 +20,17 @@ def predit():
         ##process data
         data = request.get_json()
         context = data['context']
-        answers = data['answers']
-        is_sentence_level = data['is_sentence_level']
-        data_query = []
-        for ans in answers:
-            start_answer = ans['start_answer']
-            end_answer = ans['end_answer']
-            answer = ans['answer']
-            index = 0
-            if is_sentence_level:
-                for sent in sent_tokenize(context):
-                    j = sent.find(answer)
-                    if j != -1 and index <= start_answer and (index + len(sent)) >= end_answer:
-                        data_query.append((sent, start_answer, end_answer, answer))
-                        break
-                    index += (len(sent) + 1)
-            else:
-                data_query.append((start_answer, end_answer, answer))
+        answers = []
+        if 'answers' in data:
+            answers = data['answers']
 
-        result = []
-        if is_sentence_level:
-            for data_item in data_query:
-                question = evaluate(model, data_item[0], data_item[1], data_item[2], tokenizer)
-                result.append({"question": question, "answer": data_item[3]})
-        else :
-            for data_item in data_query:
-                question = evaluate(model, context, data_item[0], data_item[1], tokenizer)
-                result.append({"question": question, "answer": data_item[2]})
-        response = jsonify({'questions' : result})
+        response = []
+        list_dict_answers = []
+        for ans in answers:
+            list_dict_answers.append({'start_ans' : ans['start_answer'], 'end_ans' : ans['end_answer']})
+
+        response = generate(model, tokenizer, context, device, answers)
+        response = jsonify({'questions' : response})
         return response
 
 if __name__ == "__main__":

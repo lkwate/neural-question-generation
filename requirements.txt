@@ -1,5 +1,6 @@
-pytorch
-pytorch-transformers
-pytorch_pretrained_bert
+torch 
+torchvision
+langdetect
+transformers
 flask-cors
 tqdm
