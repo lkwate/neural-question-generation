@@ -123,25 +123,3 @@ go to link [welcome](http://127.0.0.1:5000)
     <td>Thousands</td>
   </tr>
 </table>
-
-
-
-<h2>The BLEU scores on dev set are :</h2>
-<table>
-  <tr>
-    <th></th>
-    <th>BLEU-1</th>
-    <th>BLEU-2</th>
-    <th>BLEU-3</th>
-    <th>BLEU-4</th>  
-  </tr>
-  <tr>
-    <td>Dev set</td>
-    <td>24.88</td>
-    <td>22.11</td>
-    <td>21.68</td>
-    <td>20.51</td>
-  </tr>
-</table>
-
-
