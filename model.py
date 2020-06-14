@@ -15,6 +15,6 @@ class QGModel(nn.Module):
                                decoder_attention_mask=attention_mask_qt, lm_labels=input_ids_qt)
         return output
 
-    def predict(self, intput_ids_ctx, attention_mask=None):
-        output = self.t5_model.generate(intput_ids_ctx, attention_mask)
+    def predict(self, intput_ids_ctx):
+        output = self.t5_model.generate(intput_ids_ctx)
         return output

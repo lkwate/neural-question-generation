@@ -31,8 +31,12 @@ def evaluate(model, data_loader, tokenizer, device):
                 score += temp_score
                 predictions.append((ground_truth, predicted_question, temp_score))
         score /= len(predictions)
+        predictions = {
+            "score" : score,
+            "predictions" : predictions
+        }
 
-    return score, predictions
+    return predictions
 
 
 def generate(model, tokenizer, context, device, list_dict_answers=None):
@@ -84,6 +88,6 @@ def generate(model, tokenizer, context, device, list_dict_answers=None):
 
 if __name__ == '__main__':
     model = QGModel(configT5_model, config['path_t5_question_generation']).to(device)
-    _, predictions = evaluate(model, valid_loader, tokenizer, device)
+    predictions = evaluate(model, valid_loader, tokenizer, device)
     with open('./prediction/prediction.json', 'w') as file:
         json.dumps(predictions, file)

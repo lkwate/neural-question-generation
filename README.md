@@ -1,28 +1,30 @@
 # question-generation
-Our system is based on BERT model and Transformer, which generate question for question answering based on text corpus. 
+We built a system that generates the question according to a given context and the answers of the generated question lie into the context.
 
-Some person who have knowledge about current literature of natural language processing may be wondering that our system is based on BERT model and Transformer separately.  
+Our model is based on Text-to-Text Transfer Transformer framework **T5** provided Google AI, that consists of stacks of Transformer-Encoder layers (linked in BERT fashion) and Transformer-Decoder layers (also lined in BERT fashion) . We fine tuned the model by adding a new Text-to-Text task (question generation) to the model
 
 
 ## Introduction 
-In our educational system, the common form of examination is question forms, the teacher is generally tasked to design question forms, for student. To reach the general education purpose which try to improve understanding of the student about a specific knowledge, it is important to design the relevant questions to evaluate the skills of the student in this specific knowledge. We designed a system which try to produce tex comprehension question based on a given corpus. the system designed is unilingual (English). the system will be benefit for educators by saving his time for generate question forms.  
+In our educational system, the common form of examination is question forms, the teachers are generally charged to design question forms, for the students. To reach the general education purpose that aims to improve the cognitive skills of the students about a specific knowledge, it is important to design the relevant questions to evaluate the skills of the students in this specific context. We designed a system that tries to produce conditional question based on a given corpus. the system designed is unilingual (English). the system will be benefit for educators by saving their time for generating examination.  
 
 ## To do
 * Build another sub-systems answer question
-* Merge the two systems to form an auto evaluation system 
+* Merge the two systems to form an autonomous evaluation system 
 
 ## Description
 ### Architecture of model
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/architecture.jpg)
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/architecture-nn.jpg)
 
 ## Dependencies
 
 ```
-pytorch 1.4.0
-python 3.7 
-nltk
-pytorch-pretrained-bert
-pytorch-transformers
+torch
+torchvision
+langdetect
+python
+flask-cors
+tqdm
+transformers
 ```
 to use our systems you need to follow those steps : 
 
@@ -31,10 +33,9 @@ to use our systems you need to follow those steps :
 	```
 	sudo apt-get install python3.7
 	sudo apt-get install python3-pip
-	pip3 install torch torchvision (https://pytorch.org/get-started/locally/ to more personalize setup)
-	pip3 install nltk 
-	pip3 install pytorch-pretrained-bert
-	pip3 install pytorch-transformers
+	pip3 install torch torchvision (https://pytorch.org/get-started/locally/ to personalize installation)
+	pip3 install transformers
+	pip3 install langdetect
 	pip3 install flask-cors
 	```
 ## Dataset
@@ -47,7 +48,7 @@ cd neural-question-generation
 python3 train.py
 ```
 
-this will take a few days depending on the architecture and power of your computer
+this will take around 4 hours on GPU
 
 ## How to use 
 ```
@@ -58,10 +59,6 @@ go to link [welcome](http://127.0.0.1:5000)
 
 ### add context
 ![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/add_context.png)
-### select answer in context
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/select_spanned_answer.png)
-### add answer
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/add_answer.png)
 ### generate question 
 ![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/generate_question.png)
 
@@ -71,19 +68,36 @@ go to link [welcome](http://127.0.0.1:5000)
 <table>
   <tr>
     <th>Context</th>
-    <th> The French administration, reluctant to return their pre-war possessions to German companies, reassigned some of them to French companies. This was particularly the case for the Société financière des caoutchoucs, which obtained plantations put into operation during the German period and became the largest company in Cameroon under French mandate. Roads were being built to link the main cities together, as well as various infrastructure such as bridges and airports</th>
+    <th> When Hitler launched World War II by invading Poland, British and French officials in Cameroon seized the German-owned plantations (1939-40). After the fall of France (June 1940), the country's colonial dependencies proclaimed loyalty to Marshal Petain' new Vichy regime. Central Africa was an exception</th>
     <th>answer</th>
   </tr>
   <tr>
-    <td rowspan="2">Question predicted</td>
-    <td>what were the main types of buildings in the area?</td>
-    <td>bridges and airports</td>
+    <td rowspan="6">Question predicted</td>
+    <td>Who launched World War II by invading Poland?</td>
+    <td>Hitler</td>
   </tr>
   <tr>
-    <td>what were the main types of buildings in the area?</td>
-    <td>Roads</td>
+    <td>What war did Hitler begin by invading Poland?</td>
+    <td>World War II</td>
+  </tr>
+  <tr>
+    <td>What country did Hitler invade in World War II?</td>
+    <td>Poland</td>
+  </tr>
+  <tr>
+    <td>Who did Cameroon's colonial dependencies proclaim loyalty to?</td>
+    <td>Marshal Petain</td>
+  </tr>
+  <tr>
+    <td>What region was an exception to the Vichy regime?</td>
+    <td>Central Africa</td>
+  </tr>
+  <tr>
+    <td>What regime did the colonial dependencies of Cameroon resign to?</td>
+    <td>Vichy</td>
   </tr>
 </table>
+
 
 <table>
   <tr>
@@ -93,22 +107,24 @@ go to link [welcome](http://127.0.0.1:5000)
   </tr>
   <tr>
     <td rowspan="4">Question predicted</td>
-    <td>how were the people in the city killed?</td>
-    <td>fifty-four hours a week</td>
+    <td>What was the mortality rate in 1925?</td>
+    <td>61.7%</td>
   </tr>
   <tr>
-    <td>how many people were killed in the death of the people in the city?</td>
-    <td>Thousands of workers</td>
+    <td>Which regime began the Douala-Yaoundé railway?</td>
+    <td>German</td>
   </tr>
   <tr>
-    <td>what company built the first building in the south east?</td>
-    <td>German regime</td>
+    <td>Which railroad line in the German era was completed in 1925?</td>
+    <td>Douala</td>
   </tr>
   <tr>
-    <td>what was the name of the new delhi river?</td>
-    <td>The Douala-Yaoundé railway line</td>
+    <td>How many workers were deported to this railroad site?</td>
+    <td>Thousands</td>
   </tr>
 </table>
+
+
 
 <h2>The BLEU scores on dev set are :</h2>
 <table>

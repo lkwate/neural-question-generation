@@ -26,9 +26,9 @@ def trainEpoch(model, optimizer, train_data_loader, valid_data_loader, tokenizer
             optimizer.step()
             optimizer.zero_grad()
             losses.append(loss.item())
-    score, predictions = evaluate(model, valid_data_loader, tokenizer, device)
+    predictions = evaluate(model, valid_data_loader, tokenizer, device)
 
-    return score, predictions
+    return losses, predictions
 
 # global training
 def globalTraining(model, optimizer, train_dataset, valid_dataset, tokenizer, device):
