@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#pretrained-model
+pre-trained-model/t5-question-generation/
+
 # C extensions
 *.so
 
