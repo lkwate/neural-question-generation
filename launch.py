@@ -7,6 +7,10 @@ from model import QGModel
 app = Flask(__name__)
 CORS(app)
 
+print('Loading model....')
+model = QGModel(configT5_model, config['path_t5_question_generation']).to(device)
+print('Predicting question...')
+
 
 @app.route('/')
 def welcome():
@@ -32,5 +36,3 @@ def predit():
 
 if __name__ == "__main__":
     app.run(debug=True)
-    model = QGModel(configT5_model, config['path_t5_question_generation'])
-    

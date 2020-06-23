@@ -42,12 +42,14 @@ def evaluate(model, data_loader, tokenizer, device):
 def generate(model, tokenizer, context, device, list_dict_answers=None):
     # check the length of context
     if len(tokenizer.tokenizer.tokenize(context)) >= config['max_len_context'] - 4:
-        raise ValueError("context too long")
+    	# send {'length_failed' : True}
+        return {'invalid_length' : True}
 
     # check whether the context is in english
     lang = detect(context)
     if lang != 'en':
-        raise ValueError('context should be in english')
+    	# send {'language_failed' : True}
+        return {'invalid_lang' : True}
 
     # define inputs of the model
     input_ids = []

@@ -35,8 +35,10 @@ to use our systems you need to follow those steps :
 	sudo apt-get install python3-pip
 	pip3 install torch torchvision (https://pytorch.org/get-started/locally/ to personalize installation)
 	pip3 install transformers
+	pip3 install tqdm
 	pip3 install langdetect
 	pip3 install flask-cors
+	python3 -m spacy download en
 	```
 ## Dataset
 we use the recently updated SQUAD v.2
@@ -56,11 +58,6 @@ cd neural-question-generation
 FLASK_ENV=development python3 launch.py
 ```
 go to link [welcome](http://127.0.0.1:5000)
-
-### add context
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/add_context.png)
-### generate question 
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/generate_question.png)
 
 ## Result
 
