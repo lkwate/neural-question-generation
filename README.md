@@ -1,4 +1,3 @@
-# Welcome
 # question-generation
 We built a system that generates the question according to a given context and the answers of the generated question lie into the context.
 
