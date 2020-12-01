@@ -27,7 +27,7 @@ wget
 SQUAD v.2
 
 ## Evaluation
-We use [NUBIA](https://wl-research.github.io/blog/2020/04/29/introducing-nubia.html) to evaluate our model, we got the following results
+We used [NUBIA](https://wl-research.github.io/blog/2020/04/29/introducing-nubia.html) to evaluate our model, we got the following results
 <table>
   <tr>
     <th>Model</th>
