@@ -5,6 +5,7 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 from langdetect import detect
 import sys
 import os
+import wget
 
 
 MODEL_PATH = "model/"
