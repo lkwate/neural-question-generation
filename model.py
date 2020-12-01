@@ -97,7 +97,7 @@ class Model():
     @staticmethod
     def _bar_custom(current, total, width = 80):
         sys.stdout.write("\r" + "Downloading: %d%% [%d / %d] bytes" % (current / total * 100, current, total))
-        sys.flush()
+        sys.stdout.flush()
         
     
     def generate(self, context, answer):
