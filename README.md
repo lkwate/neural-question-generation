@@ -26,10 +26,27 @@ wget
 ## Dataset
 SQUAD v.2
 
+## Evaluation
+We use [NUBIA](https://wl-research.github.io/blog/2020/04/29/introducing-nubia.html) to evaluate our model, we got the following results
+<table>
+  <tr>
+    <th>Model</th>
+    <th> Logical Agreement </th>
+    <th> Semantic relation </th>
+    <th> Chance of contradiction </th>
+  </tr>
+  <tr>
+    <th>T5-RL</th>
+    <th> 59.5/100 </th>
+    <th> 39/100 </th>
+    <th> 18/100 </th>
+  </tr>
+</table>
+
+
 
 ## Some Results
 
-<h2>Some predictions on testing step :</h2>
 <table>
   <tr>
     <th>Context</th>
