@@ -3,3 +3,4 @@ langdetect
 gradio
 transformers
 wget
+sentencepiece
