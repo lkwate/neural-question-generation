@@ -76,12 +76,12 @@ class Model():
     def __init__(self):
         
         if not os.path.isfile(CONFIG_SAVE_PATH):
-            print("Download config from {}".format(CONFIG_URL))
+            print("Download config from aws s3... {}")
             wget.download(CONFIG_URL, bar= self._bar_custom)
             shutil.move("config.json", "model/config.json")
     
         if not os.path.isfile(MODEL_BIN_SAVE_PATH):
-            print("Download model from {}".format(MODEL_BIN_URL))
+            print("Download model from aws s3... {}")
             wget.download(MODEL_BIN_URL, bar=self._bar_custom)
             shutil.move("model.bin", "model/model.bin")
             
@@ -97,7 +97,7 @@ class Model():
     
     @staticmethod
     def _bar_custom(current, total, width = 80):
-        sys.stdout.write("\r" + "Downloading: %d%% [%d / %d] bytes" % (current / total * 100, current, total))
+        sys.stdout.write("\r" + "Downloading: %d%% [%d / %d] bytes\n" % (current / total * 100, current, total))
         sys.stdout.flush()
         
     
