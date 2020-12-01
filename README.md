@@ -1,65 +1,32 @@
 # question-generation
-We built a system that generates the question according to a given context and the answers of the generated question lie into the context.
-
-Our model is based on Text-to-Text Transfer Transformer framework **T5** provided Google AI, that consists of stacks of Transformer-Encoder layers (linked in BERT fashion) and Transformer-Decoder layers (also lined in BERT fashion) . We fine tuned the model by adding a new Text-to-Text task (question generation) to the model
+Reinforcement Learning Generator-Evaluator Architecture for Question Generation. 
+The is based on Text-to-Text Transfer Transformer framework **T5** provided Google AI, that consists of stacks of Transformer-Encoder layers (linked in BERT fashion) and Transformer-Decoder layers (also lined in BERT fashion). The training of the Generator T5 was drived by an Evaluator that optimized the Generator parameters on task-specific reward function (BLEU + GenSim) through Policy Gradient.
 
 
 ## Introduction 
 In our educational system, the common form of examination is question forms, the teachers are generally charged to design question forms, for the students. To reach the general education purpose that aims to improve the cognitive skills of the students about a specific knowledge, it is important to design the relevant questions to evaluate the skills of the students in this specific context. We designed a system that tries to produce conditional question based on a given corpus. the system designed is unilingual (English). the system will be benefit for educators by saving their time for generating examination.  
 
-## To do
-* Build another sub-systems answer question
-* Merge the two systems to form an autonomous evaluation system 
 
 ## Description
 ### Architecture of model
-![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/architecture-nn.png)
+![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/model-rl.png)
 
 ## Dependencies
 
 ```
 torch
-torchvision
 langdetect
-python
-flask-cors
-tqdm
 transformers
+sentencepiece
+gradio
+wget
 ```
-to use our systems you need to follow those steps : 
 
-* install dependencies : 
-
-	```
-	sudo apt-get install python3.7
-	sudo apt-get install python3-pip
-	pip3 install torch torchvision (https://pytorch.org/get-started/locally/ to personalize installation)
-	pip3 install transformers
-	pip3 install tqdm
-	pip3 install langdetect
-	pip3 install flask-cors
-	python3 -m spacy download en
-	```
 ## Dataset
-we use the recently updated SQUAD v.2
+SQUAD v.2
 
-## Train
-```
-git clone https://github.com/lkwate/neural-question-generation.git
-cd neural-question-generation
-python3 train.py
-```
 
-this will take around 4 hours on GPU
-
-## How to use 
-```
-cd neural-question-generation
-FLASK_ENV=development python3 launch.py
-```
-go to link [welcome](http://127.0.0.1:5000)
-
-## Result
+## Some Results
 
 <h2>Some predictions on testing step :</h2>
 <table>
