@@ -6,6 +6,7 @@ from langdetect import detect
 import sys
 import os
 import wget
+import shutil
 
 
 MODEL_PATH = "model/"
@@ -75,11 +76,13 @@ class Model():
         
         if not os.path.isfile(CONFIG_SAVE_PATH):
             print("Download config from {}".format(CONFIG_URL))
-            wget.download(CONFIG_URL, MODEL_PATH, bar= self.__bar_custom)
+            wget.download(CONFIG_URL, bar= self.__bar_custom)
+			shutil.move("config.json", "model/config.json")
     
         if not os.path.isfile(MODEL_BIN_SAVE_PATH):
             print("Download model from {}".format(MODEL_BIN_URL))
-            wget.download(MODEL_BIN_URL, MODEL_PATH, bat=self.__bar_custom)
+            wget.download(MODEL_BIN_URL, bat=self.__bar_custom)
+            shutil.move("model.bin", "model/model.bin")
             
         #tokenizer
         self.tokenizer = Tokenizer()
