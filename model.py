@@ -89,11 +89,10 @@ class Model():
         self.tokenizer = Tokenizer()
         # configuration
         self.config = json.load(open(CONFIG_SAVE_PATH))
-        # model
-        self.model = QGModel(self.config, MODEL_PATH)
         #device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+        # model
+        self.model = QGModel(self.config, MODEL_PATH).to(device)     
     
     @staticmethod
     def _bar_custom(current, total, width = 80):
