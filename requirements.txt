@@ -1,6 +1,6 @@
 torch 
-torchvision
 langdetect
+gradio
 transformers
-flask-cors
-tqdm
+wget
+
