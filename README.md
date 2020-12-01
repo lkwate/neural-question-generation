@@ -8,7 +8,7 @@ In our educational system, the common form of examination is question forms, the
 
 
 ## Description
-### Architecture of model
+### Model Architecture
 ![alt text](https://github.com/lkwate/neural-question-generation/blob/master/images/model-rl.png)
 
 ## Dependencies
