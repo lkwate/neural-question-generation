@@ -10,6 +10,7 @@ import shutil
 
 
 MODEL_PATH = "model/"
+os.mkdir(MODEL_PATH)
 CONFIG_URL = "https://lkwate-model.s3.eu-west-3.amazonaws.com/config.json"
 CONFIG_SAVE_PATH = "{}config.json".format(MODEL_PATH)
 MODEL_BIN_URL = "https://lkwate-model.s3.eu-west-3.amazonaws.com/model.bin"
