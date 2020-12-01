@@ -77,12 +77,12 @@ class Model():
     def __init__(self):
         
         if not os.path.isfile(CONFIG_SAVE_PATH):
-            print("Download config from aws s3... {}")
+            print("Download config from aws s3... {}".format(CONFIG_URL))
             wget.download(CONFIG_URL, bar= self._bar_custom)
             shutil.move("config.json", "model/config.json")
     
         if not os.path.isfile(MODEL_BIN_SAVE_PATH):
-            print("Download model from aws s3... {}")
+            print("Download model from aws s3... {}".format(MODEL_BIN_URL))
             wget.download(MODEL_BIN_URL, bar=self._bar_custom)
             shutil.move("model.bin", "model/pytorch_model.bin")
             
