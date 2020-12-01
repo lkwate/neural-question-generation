@@ -9,12 +9,13 @@ import wget
 import shutil
 
 
-MODEL_PATH = "model/"
-os.mkdir(MODEL_PATH)
+MODEL_PATH = os.getcwd() + "/model/"
+if not os.path.exists(MODEL_PATH):
+	os.mkdir(MODEL_PATH)
 CONFIG_URL = "https://lkwate-model.s3.eu-west-3.amazonaws.com/config.json"
 CONFIG_SAVE_PATH = "{}config.json".format(MODEL_PATH)
 MODEL_BIN_URL = "https://lkwate-model.s3.eu-west-3.amazonaws.com/model.bin"
-MODEL_BIN_SAVE_PATH = "{}model.bin".format(MODEL_PATH)
+MODEL_BIN_SAVE_PATH = "{}pytorch_model.bin".format(MODEL_PATH)
 
 # config
 config = {
@@ -38,7 +39,7 @@ class Tokenizer:
             return dict{input_ids, attention_mask, token_type_ids}
         """
         input = config['task'] + context + " "+ config['ans'] + answer + config['end_token']
-        output = self.tokenizer.encode_plus(input, max_length = config['max_len_context'], pad_to_max_length=True)
+        output = self.tokenizer.encode_plus(input, max_length = config['max_len_context'], truncation=True, padding=True)
         return output
     
     def encode_question(self, question):
@@ -83,16 +84,14 @@ class Model():
         if not os.path.isfile(MODEL_BIN_SAVE_PATH):
             print("Download model from aws s3... {}")
             wget.download(MODEL_BIN_URL, bar=self._bar_custom)
-            shutil.move("model.bin", "model/model.bin")
+            shutil.move("model.bin", "model/pytorch_model.bin")
             
         #tokenizer
         self.tokenizer = Tokenizer()
-        # configuration
-        self.config = json.load(open(CONFIG_SAVE_PATH))
         #device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # model
-        self.model = QGModel(self.config, MODEL_PATH).to(device)     
+        self.model = QGModel(MODEL_PATH, path = MODEL_PATH).to(self.device)     
     
     @staticmethod
     def _bar_custom(current, total, width = 80):
@@ -101,14 +100,14 @@ class Model():
         
     
     def generate(self, context, answer):
-        lang = langdetect(context)
+        lang = detect(context)
         if lang != "en":
             raise ValueError("Text should be in english")
         
         input_ids = [self.tokenizer.encode_context(context, answer)['input_ids']]
         input_ids = torch.LongTensor(input_ids).to(self.device)
         
-        predicted_question = self.model.predict(input_ids)
+        predicted_question = self.model.predict(input_ids).squeeze(0)
         predicted_question = self.tokenizer.tokenizer.decode(predicted_question.tolist())
         
         return predicted_question
