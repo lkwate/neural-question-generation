@@ -3,4 +3,4 @@ langdetect
 gradio
 transformers
 wget
-
+Flask==1.1.1
