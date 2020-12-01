@@ -76,12 +76,12 @@ class Model():
         
         if not os.path.isfile(CONFIG_SAVE_PATH):
             print("Download config from {}".format(CONFIG_URL))
-            wget.download(CONFIG_URL, bar= self.__bar_custom)
+            wget.download(CONFIG_URL, bar= self._bar_custom)
             shutil.move("config.json", "model/config.json")
     
         if not os.path.isfile(MODEL_BIN_SAVE_PATH):
             print("Download model from {}".format(MODEL_BIN_URL))
-            wget.download(MODEL_BIN_URL, bat=self.__bar_custom)
+            wget.download(MODEL_BIN_URL, bar=self._bar_custom)
             shutil.move("model.bin", "model/model.bin")
             
         #tokenizer
