@@ -1,5 +1,5 @@
 # Reinforcement Learning Generator-Evaluator Architecture for Question Generation. 
-[demo colab](https://colab.research.google.com/drive/1AQP9ELGoTOuZw6XPGitzw6_uKUAnO8Z5?usp=sharing)
+[demo colab](https://docs.google.com/presentation/d/1oRBKXuJ3vhxhSTsidOgRadDGV985E00h8GCCga5sj6M/edit?usp=sharing)
   
 The model is based on Text-to-Text Transfer Transformer framework **T5** provided Google AI, that consists of stacks of Transformer-Encoder layers (linked in BERT fashion) and Transformer-Decoder layers (also lined in BERT fashion). The training of the Generator T5 was drived by an Evaluator that optimized the Generator parameters on task-specific reward function (BLEU + GenSim) through Policy Gradient.
 
