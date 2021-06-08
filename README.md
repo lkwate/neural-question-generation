@@ -1,11 +1,8 @@
 # Reinforcement Learning Generator-Evaluator Architecture for Question Generation. 
 [demo colab](https://colab.research.google.com/drive/1AQP9ELGoTOuZw6XPGitzw6_uKUAnO8Z5?usp=sharing)
   
-The model is based on Text-to-Text Transfer Transformer framework **T5** provided Google AI, that consists of stacks of Transformer-Encoder layers (linked in BERT fashion) and Transformer-Decoder layers (also linked in BERT fashion). The training of the Generator T5 was drived by an Evaluator that optimized the Generator parameters on task-specific reward function (BLEU + GenSim) through Policy Gradient.
+We present in this work a fully Transformer-based Generator-Discriminator architecture for question generation. Transformer has been identified as a universal approximator of any sequence-to-sequence function. That is, a Transformer model which is deep enough can theoritically address the question generation task. For the sake of diversity --on the semantic sense-- at the inference, we experimented the Generator-discriminator architecture to address the question generation problem. T5 was used as the generator and the mixture of BLEU and the cosine similarity of the representation output by ELECTRA-discriminator was used as the discriminator.
 
-
-## Introduction 
-In our educational system, the common form of examination is question forms, the teachers are generally charged to design question forms, for the students. To reach the general education purpose that aims to improve the cognitive skills of the students about a specific knowledge, it is important to design the relevant questions to evaluate the skills of the students in this specific context. We designed a system that tries to produce conditional question based on a given corpus. the system designed is unilingual (English). the system will be benefit for educators by saving their time for generating examination.  
 
 
 ## Description
@@ -16,11 +13,13 @@ In our educational system, the common form of examination is question forms, the
 
 ```
 torch
-langdetect
 transformers
 sentencepiece
-gradio
-wget
+pytorch_lightning
+nltk
+collections
+bert-score
+
 ```
 
 ## Dataset
@@ -31,15 +30,17 @@ We used [NUBIA](https://wl-research.github.io/blog/2020/04/29/introducing-nubia.
 <table>
   <tr>
     <th>Model</th>
-    <th> Logical Agreement </th>
+    <th> BLEU</th>
+    <th> BERTScore </th>
     <th> Semantic relation </th>
-    <th> Chance of contradiction </th>
+    <th> Logical Agreement </th>
   </tr>
   <tr>
     <th>T5-RL</th>
-    <th> 59.5/100 </th>
-    <th> 39/100 </th>
-    <th> 18/100 </th>
+    <th> 22.05</th>
+    <th> 52.62 </th>
+    <th> 61.31 </th>
+    <th> 42.52 </th>
   </tr>
 </table>
 

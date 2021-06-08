@@ -1,6 +1,7 @@
-torch 
-langdetect
-gradio
-transformers
-wget
-sentencepiece
+torch
+pytorch_lightning
+nltk
+collections
+tranformers
+bert-score
+pytorch-transformers

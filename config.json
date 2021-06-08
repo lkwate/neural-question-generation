@@ -1,0 +1,23 @@
+{
+    "batch_size" : 8,
+    "max_epoch" : 10,
+    "model_generator" : "t5-base",
+    "model_evaluator" : "google/electra-base-discriminator",
+    "max_len_context": 500,
+    "max_len_answer" : 12,
+    "max_len_question" : 40,
+    "train_dataset" : "data/squad-train.csv",
+    "val_dataset" : "data/squad-dev.csv",
+    "num_workers" : 4,
+    "val_test_split_factor" : 0.5, 
+    "task" : "question : ",
+    "num_samples_tune" : 8,
+    "accumulate_grad_batches" : 4,
+    "learning_rate" : 1.17e-5,
+    "alpha" : 0.1971,
+    "gamma" : 0.09,
+    "lr_scheduler_factor" : 0.9,
+    "val_check_interval" : 0.25,
+    "lr_scheduler_step" : 4000, 
+    "checkpoint" : ""
+}
