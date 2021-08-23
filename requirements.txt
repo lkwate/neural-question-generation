@@ -1,6 +1,6 @@
 torch
 pytorch_lightning
 nltk
-tranformers
+transformers
 bert-score
 pytorch-transformers
