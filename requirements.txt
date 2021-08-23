@@ -4,3 +4,4 @@ nltk
 transformers
 bert-score
 pytorch-transformers
+ray
