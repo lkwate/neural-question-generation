@@ -1,5 +1,4 @@
 # Reinforcement Learning Generator-Evaluator Architecture for Question Generation. 
-[demo colab](https://colab.research.google.com/drive/1AQP9ELGoTOuZw6XPGitzw6_uKUAnO8Z5?usp=sharing)
   
 We present in this work a fully Transformer-based Generator-Discriminator architecture for question generation. Transformer has been identified as a universal approximator of any sequence-to-sequence function. That is, a Transformer model which is deep enough can theoritically address the question generation task. For the sake of diversity --on the semantic sense-- at the inference, we experimented the Generator-discriminator architecture to address the question generation problem. T5 was used as the generator and the mixture of BLEU and the cosine similarity of the representation output by ELECTRA-discriminator was used as the discriminator.
 
